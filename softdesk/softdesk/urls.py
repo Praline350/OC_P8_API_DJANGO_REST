@@ -20,10 +20,13 @@ from rest_framework import routers
 from django.urls import path, include
 
 from authentication.views import UserViewset
+from projects.views import ProjectViewset, ContributoViewset
 
 router = routers.SimpleRouter()
 
-router.register('user', UserViewset, basename='user')
+router.register(r'user', UserViewset, basename='user')
+router.register(r'project', ProjectViewset, basename='project')
+router.register(r'contributor', ContributoViewset, basename='contributor')
 
 urlpatterns = [
 
@@ -32,8 +35,8 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     path('api/', include(router.urls)),
 
-    # Obtain and refresh token 
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/login/', TokenObtainPairView.as_view(), name='login'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    
 
 ]
