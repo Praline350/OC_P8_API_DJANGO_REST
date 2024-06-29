@@ -22,7 +22,7 @@ class ProjectViewset(MultipleSerializerMixin ,ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['list', 'create']:
-            self.permission_classes = [IsAuthenticated]
+            self.permission_classes = [AllowAny]
         elif self.action in ['retrieve']:
             self.permission_classes = [IsAuthenticated, IsContributor]
         else:  # ['update', 'partial_update', 'destroy']
@@ -33,7 +33,7 @@ class ProjectViewset(MultipleSerializerMixin ,ModelViewSet):
         return Project.objects.all()
     
 
-class ContributoViewset(MultipleSerializerMixin, ModelViewSet):
+class ContributorViewset(MultipleSerializerMixin, ModelViewSet):
     serializer_class = ContributorSerializer
     permission_classes = [AllowAny]
 
