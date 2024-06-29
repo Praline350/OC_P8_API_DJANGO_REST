@@ -45,6 +45,35 @@ class ProjectTest(APITestCase):
         self.assertTrue(Contributor.objects.filter(project=project, user=self.user).exists())
         self.assertTrue(Contributor.objects.filter(project=project, user=self.other_user).exists())
 
+    def test_create_project_with_invalid_contributors(self):
+        url = reverse('project-list')
+        data = {
+            'name': 'Invalid Contributors Project',
+            'description': 'This project has invalid contributors',
+            'type': 'back-end',
+            'contributors': [9999]  # ID d'utilisateur inexistant
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('contributors', response.data)
+
+    def test_create_project_with_duplicate_contributors(self):
+        url = reverse('project-list')
+        data = {
+            'name': 'Duplicate Contributors Project',
+            'description': 'This project has duplicate contributors',
+            'type': 'back-end',
+            'contributors': [self.user.id, self.user.id, self.other_user.id, self.other_user.id]  # Duplication du même ID
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        project = Project.objects.get(name='Duplicate Contributors Project')
+        contributors = Contributor.objects.filter(project=project)
+        print(response.data)
+        self.assertEqual(contributors.count(), 2)
+        self.assertEqual(contributors.first().user, self.user)
+
     def test_update_project_by_author(self):
         project = self.create_project_with_contributors()
         url = reverse('project-detail', args=[project.id])
@@ -75,7 +104,7 @@ class ProjectTest(APITestCase):
             'contributors': [self.user.id]
         }
         response = self.client.put(url, data)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, 403)
         self.assertEqual(project.name, 'Test Project')
 
     def test_detail_projects_as_contributor(self):
@@ -83,11 +112,26 @@ class ProjectTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + str(RefreshToken.for_user(self.other_user).access_token))
         url = reverse('project-detail', args=[project.id])
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, 200)
 
     def test_detail_projects_as_no_contributor(self):
         project = self.create_project_with_contributors()
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + str(RefreshToken.for_user(self.another_user).access_token))
         url = reverse('project-detail', args=[project.id])
         response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_delete_project_by_author(self):
+        project = self.create_project_with_contributors()
+        url = reverse('project-detail', args=[project.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Project.objects.filter(id=project.id).exists())
+    
+    def test_delete_project_by_no_author(self):
+        project = self.create_project_with_contributors()
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + str(RefreshToken.for_user(self.other_user).access_token))
+        url = reverse('project-detail', args=[project.id])
+        response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(Project.objects.filter(id=project.id).exists())
