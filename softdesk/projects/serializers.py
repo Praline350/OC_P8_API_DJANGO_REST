@@ -27,8 +27,10 @@ class ProjectListSerializer(serializers.ModelSerializer):
         contributors_data = validated_data.pop('contributors', [])
         request = self.context.get('request')
         project = Project.objects.create(author=request.user, **validated_data)
-        Contributor.objects.create(user=request.user, project=project)
-        for user in contributors_data:
+        # Ajouter l'auteur comme contributeur et supprimer les doublons
+        unique_contributors = set(contributors_data)
+        unique_contributors.add(project.author)
+        for user in unique_contributors:
             Contributor.objects.create(user=user, project=project)
         return project
     
@@ -46,16 +48,16 @@ class ProjectDetailSerializer(ProjectListSerializer):
         instance.description = validated_data.get('description', instance.description)
         instance.type = validated_data.get('type', instance.type)
         instance.save()
-    
-        new_contributors = set([user.id for user in contributors_data])
-        new_contributors.add(request.user.id)
-        current_contributors = set(instance.contributors.values_list('id', flat=True))
-        contributors_to_add = new_contributors - current_contributors
-        contributors_to_remove = current_contributors - new_contributors
-        for user_id in contributors_to_add:
-            user = User.objects.get(id=user_id)
-            Contributor.objects.create(user=user, project=instance)
-        for user_id in contributors_to_remove:
-            Contributor.objects.filter(user_id=user_id, project=instance).delete()
-        return instance
+        if contributors_data is not None:
+            new_contributors = set([user.id for user in contributors_data])
+            new_contributors.add(request.user.id)
+            current_contributors = set(instance.contributors.values_list('id', flat=True))
+            contributors_to_add = new_contributors - current_contributors
+            contributors_to_remove = current_contributors - new_contributors
+            for user_id in contributors_to_add:
+                user = User.objects.get(id=user_id)
+                Contributor.objects.create(user=user, project=instance)
+            for user_id in contributors_to_remove:
+                Contributor.objects.filter(user_id=user_id, project=instance).delete()
+            return instance
 
