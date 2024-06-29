@@ -22,8 +22,6 @@ class MultipleSerializerMixin:
         return super().get_serializer_class()
 
 class UserViewset(MultipleSerializerMixin, ModelViewSet):
-
-    permission_classes = [AllowAny]
     serializer_class = UserListSerializer
     detail_serializer_class = UserDetailSerializer
     
@@ -31,9 +29,9 @@ class UserViewset(MultipleSerializerMixin, ModelViewSet):
     def get_queryset(self):
         return User.objects.all()
     
-    """def get_permissions(self):
+    def get_permissions(self):
         if self.action == 'create':
             self.permission_classes = [AllowAny]
         else:
             self.permission_classes = [IsAuthenticated]
-        return super().get_permissions()"""
+        return super().get_permissions()
