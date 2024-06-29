@@ -117,3 +117,15 @@ class UserTest(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(User.objects.filter(id=self.user.id).exists())
+
+    def test_user_login(self):
+        url = reverse('login')
+        data = {
+            'username': 'testuser',
+            'password': 'password'
+        }
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
+        
