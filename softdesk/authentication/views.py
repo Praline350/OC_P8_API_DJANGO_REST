@@ -21,11 +21,12 @@ class MultipleSerializerMixin:
             return self.detail_serializer_class
         return super().get_serializer_class()
 
+
 class UserViewset(MultipleSerializerMixin, ModelViewSet):
+
     serializer_class = UserListSerializer
     detail_serializer_class = UserDetailSerializer
     
-
     def get_queryset(self):
         return User.objects.all()
     

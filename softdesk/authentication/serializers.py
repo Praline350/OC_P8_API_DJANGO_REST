@@ -28,14 +28,8 @@ class UserListSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Remove password_confirm from the validated data
         validated_data.pop('password_confirm')
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password'],
-            age=validated_data['age'],
-            can_be_contacted=validated_data['can_be_contacted'],
-            can_data_be_shared=validated_data['can_data_be_shared']
-        )
+        # Create a new user with the validated data
+        user = User.objects.create_user(**validated_data)
         return user
     
     

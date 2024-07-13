@@ -102,8 +102,6 @@ class UserTest(APITestCase):
             'can_data_be_shared': False,
         }
         response = self.client.put(url, data)
-        if response.status_code != status.HTTP_200_OK:
-            print(response.data)
         self.assertEqual(response.status_code, 200)
         self.user.refresh_from_db()
         self.assertEqual(self.user.username, 'updateduser')
