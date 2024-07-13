@@ -1,9 +1,9 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from projects.models import Project, Contributor
-from projects.serializers import ProjectListSerializer, ProjectDetailSerializer, ContributorSerializer
-from projects.permissions import IsAuthor, IsContributor
+from projects.models import Project, Contributor, Issue, Comment
+from projects.serializers import ProjectListSerializer, ProjectDetailSerializer, ContributorSerializer, CommentSerializer, IssueDetailSerializer, IssueListSerializer
+from projects.permissions import IsAuthor, IsProjectContributor
 
 
 class MultipleSerializerMixin:
@@ -24,7 +24,7 @@ class ProjectViewset(MultipleSerializerMixin ,ModelViewSet):
         if self.action in ['list', 'create']:
             self.permission_classes = [AllowAny]
         elif self.action in ['retrieve']:
-            self.permission_classes = [IsAuthenticated, IsContributor]
+            self.permission_classes = [IsAuthenticated, IsProjectContributor]
         else:  # ['update', 'partial_update', 'destroy']
             self.permission_classes = [IsAuthenticated, IsAuthor]
         return super().get_permissions()
@@ -39,3 +39,28 @@ class ContributorViewset(MultipleSerializerMixin, ModelViewSet):
 
     def get_queryset(self):
         return Contributor.objects.all()
+    
+
+class IssueViewset(MultipleSerializerMixin ,ModelViewSet):
+    serializer_class = IssueListSerializer
+    permission_classes = [IsAuthenticated, IsProjectContributor]
+
+    def get_queryset(self):
+        project_id = self.kwargs.get('project_pk')
+        return Issue.objects.filter(project_id=project_id)
+
+    def perform_create(self, serializer):
+        project_id = self.kwargs.get('project_pk')
+        project = Project.objects.get(id=project_id)
+        author = Contributor.objects.get(user=self.request.user, project=project)
+        serializer.save(author=author, project=project)
+
+class CommentViewset(MultipleSerializerMixin, ModelViewSet):
+    serializer_class = CommentSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return Comment.objects.all()
+    
+
+
