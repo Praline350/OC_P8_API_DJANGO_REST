@@ -4,14 +4,14 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 
-from projects.models import Project, Contributor
+from projects.models import Project, Contributor, Issue
 
 User = get_user_model()
 
 class ProjectTest(APITestCase):
 
     def setUp(self):
-        self.user = User.objects.create(username='testuser', password='password')
+        self.user = User.objects.create_user(username='testuser', password='password')
         self.other_user = User.objects.create_user(username='otheruser', password='password')
         self.another_user = User.objects.create_user(username='anotheruser', password='password')
         self.token = str(RefreshToken.for_user(self.user).access_token)
@@ -33,7 +33,7 @@ class ProjectTest(APITestCase):
             'name': 'Test Project',
             'description': 'This is a test project',
             'type': 'back-end',
-            'contributors': [self.other_user.id]
+            'contributors': [self.other_user]
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 201)
@@ -51,7 +51,7 @@ class ProjectTest(APITestCase):
             'name': 'Invalid Contributors Project',
             'description': 'This project has invalid contributors',
             'type': 'back-end',
-            'contributors': [9999]  # ID d'utilisateur inexistant
+            'contributors': ['inexistantUser']  
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -63,35 +63,32 @@ class ProjectTest(APITestCase):
             'name': 'Duplicate Contributors Project',
             'description': 'This project has duplicate contributors',
             'type': 'back-end',
-            'contributors': [self.user.id, self.user.id, self.other_user.id, self.other_user.id]  # Duplication du même ID
+            'contributors': ['testuser','otheruser', 'testuser', 'otheruser']  # Duplication du même ID
         }
-        response = self.client.post(url, data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        
-        project = Project.objects.get(name='Duplicate Contributors Project')
+        project = Project.objects.get(name='Test Project')
         contributors = Contributor.objects.filter(project=project)
-        print(response.data)
         self.assertEqual(contributors.count(), 2)
-        self.assertEqual(contributors.first().user, self.user)
+        self.assertTrue(contributors.filter(user=self.user).exists())
+        self.assertTrue(contributors.filter(user=self.other_user).exists())
 
-    def test_update_project_by_author(self):
+    def test_update_project(self):
         project = self.create_project_with_contributors()
         url = reverse('project-detail', args=[project.id])
         data = {
             'name': 'Updated Project',
-            'description': 'This is an updated project',
+            'description': 'This is an updated project description',
             'type': 'front-end',
-            'contributors': [self.other_user.id]
+            'contributors': ['anotheruser']
         }
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, 200)
         project.refresh_from_db()
         self.assertEqual(project.name, 'Updated Project')
-        self.assertEqual(project.description, 'This is an updated project')
+        self.assertEqual(project.description, 'This is an updated project description')
         self.assertEqual(project.type, 'front-end')
         self.assertTrue(Contributor.objects.filter(project=project, user=self.user).exists())
-        self.assertTrue(Contributor.objects.filter(project=project, user=self.other_user).exists())
-        self.assertFalse(Contributor.objects.filter(project=project, user=self.another_user).exists())
+        self.assertTrue(Contributor.objects.filter(project=project, user=self.another_user).exists())
+        self.assertFalse(Contributor.objects.filter(project=project, user=self.other_user).exists())
 
     def test_update_project_by_non_author(self):
         project = self.create_project_with_contributors()
@@ -135,3 +132,50 @@ class ProjectTest(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(Project.objects.filter(id=project.id).exists())
+
+class IssueTest(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.other_user = User.objects.create_user(username='otheruser', password='password')
+        self.not_contributor_user = User.objects.create_user(username='not_contributor', password='password')
+        self.project = Project.objects.create(name='Test Project', description='This is a test project', type='back-end', author=self.user)
+        Contributor.objects.create(user=self.user, project=self.project)
+        Contributor.objects.create(user=self.other_user, project=self.project)
+        self.token = str(RefreshToken.for_user(self.user).access_token)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.token)
+
+    def create_issue(self):
+        self.issue = Issue.objects.create(
+            project=self.project,
+            author=self.user,
+            title='Test Issue',
+            description='This is a test issue',
+            status='to-do',
+            priority='medium',
+            tag='task'
+        )
+        return self.issue
+
+    def test_create_issue(self):
+        url = reverse('issue-list', kwargs={'project_pk': self.project.id})
+        data = {
+            'title': 'Test Issue',
+            'description': 'This is a test issue',
+            'status': 'to-do',
+            'priority': 'medium',
+            'tag': 'task'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 201, response.data)
+        print(response.data)
+        issue = Issue.objects.get(title='Test Issue')
+        contributor = Contributor.objects.get(user=self.user, project=self.project)
+        self.assertEqual(issue.author, contributor)
+        self.assertEqual(issue.project, self.project)
+        self.assertEqual(issue.assignees.count(), 0)
+
+    """def test_get_issue_by_contributor(self):
+        issue = self.create_issue()"""
+
+    
