@@ -2,7 +2,7 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from projects.models import Project, Contributor, Issue, Comment
-from projects.serializers import ProjectListSerializer, ProjectDetailSerializer, ContributorSerializer, CommentSerializer, IssueDetailSerializer, IssueListSerializer
+from projects.serializers import *
 from projects.permissions import IsAuthor, IsProjectContributor
 
 
@@ -22,11 +22,11 @@ class ProjectViewset(MultipleSerializerMixin ,ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['list', 'create']:
-            self.permission_classes = [AllowAny]
+            self.permission_classes = [IsAuthenticated]
         elif self.action in ['retrieve']:
             self.permission_classes = [IsAuthenticated, IsProjectContributor]
         else:  # ['update', 'partial_update', 'destroy']
-            self.permission_classes = [IsAuthenticated, IsAuthor]
+            self.permission_classes = [IsAuthenticated,IsProjectContributor, IsAuthor]
         return super().get_permissions()
 
     def get_queryset(self):
@@ -43,24 +43,44 @@ class ContributorViewset(MultipleSerializerMixin, ModelViewSet):
 
 class IssueViewset(MultipleSerializerMixin ,ModelViewSet):
     serializer_class = IssueListSerializer
-    permission_classes = [IsAuthenticated, IsProjectContributor]
+    
+    def get_permissions(self):
+        if self.action in ['list', 'create', 'retrieve']:
+            self.permission_classes = [IsAuthenticated, IsProjectContributor]
+        else:  # ['update', 'partial_update', 'destroy']
+            self.permission_classes = [IsAuthenticated, IsProjectContributor, IsAuthor]
+        return super().get_permissions()
 
     def get_queryset(self):
-        project_id = self.kwargs.get('project_pk')
-        return Issue.objects.filter(project_id=project_id)
+        project_pk = self.kwargs.get('project_pk')
+        return Issue.objects.filter(project_id=project_pk)
 
     def perform_create(self, serializer):
-        project_id = self.kwargs.get('project_pk')
-        project = Project.objects.get(id=project_id)
-        author = Contributor.objects.get(user=self.request.user, project=project)
+        project_pk = self.kwargs.get('project_pk')
+        project = Project.objects.get(id=project_pk)
+        author = Contributor.objects.filter(user=self.request.user, project=project).first()
         serializer.save(author=author, project=project)
 
 class CommentViewset(MultipleSerializerMixin, ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = [AllowAny]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            self.permission_classes = [IsAuthenticated, IsProjectContributor]
+        else:  # ['update', 'partial_update', 'destroy']
+            self.permission_classes = [IsAuthenticated, IsProjectContributor, IsAuthor]
+        return super().get_permissions()
 
     def get_queryset(self):
-        return Comment.objects.all()
-    
+        project_pk = self.kwargs['project_pk']
+        issue_pk = self.kwargs['issue_pk']
+        return Comment.objects.filter(issue_id=issue_pk, issue__project_id=project_pk)
+
+    def perform_create(self, serializer):
+        project_pk = self.kwargs['project_pk']
+        issue_pk = self.kwargs['issue_pk']
+        issue = Issue.objects.get(pk=issue_pk, project_id=project_pk)
+        contributor = Contributor.objects.get(user=self.request.user, project_id=project_pk)
+        serializer.save(author=contributor, issue=issue)
 
 
