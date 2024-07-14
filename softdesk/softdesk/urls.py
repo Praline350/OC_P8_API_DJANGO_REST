@@ -28,7 +28,7 @@ router.register(r'user', UserViewset, basename='user')
 router.register(r'contributor', ContributorViewset, basename='contributor')
 router.register(r'project', ProjectViewset, basename='project')
 router.register(r'project/(?P<project_pk>\d+)/issues', IssueViewset, basename='issue')
-router.register(r'comment', CommentViewset, basename='comment')
+router.register(r'project/(?P<project_pk>\d+)/issues/(?P<issue_pk>\d+)/comments', CommentViewset, basename='comment')
 
 
 
