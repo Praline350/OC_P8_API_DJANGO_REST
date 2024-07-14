@@ -1,6 +1,8 @@
 import uuid
 from django.db import models
 from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.conf import settings
 
 
@@ -52,6 +54,13 @@ class Contributor(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.project.name}"
+    
+
+# Signal to add the project author as a contributor
+@receiver(post_save, sender=Project)
+def add_author_as_contributor(sender, instance, created, **kwargs):
+    if created:
+        Contributor.objects.create(user=instance.author, project=instance)
 
 
 class Issue(models.Model):
