@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 
-
+from projects.permissions import IsOwner
 from authentication.serializers import UserListSerializer, UserDetailSerializer
 
 User = get_user_model()
@@ -33,6 +33,8 @@ class UserViewset(MultipleSerializerMixin, ModelViewSet):
     def get_permissions(self):
         if self.action == 'create':
             self.permission_classes = [AllowAny]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            self.permission_classes = [IsAuthenticated, IsOwner]
         else:
             self.permission_classes = [IsAuthenticated]
         return super().get_permissions()

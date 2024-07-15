@@ -22,6 +22,12 @@ class UserTest(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
+    def test_get_user_list_no_authentication(self):
+        self.client.logout()
+        url = reverse('user-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 401)
+
     def test_get_user_not_contacted(self):
         url = reverse('user-list')
         response = self.client.get(url)
@@ -92,7 +98,7 @@ class UserTest(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertFalse(User.objects.filter(username='newuser').exists())
 
-    def test_user_update(self):
+    def test_user_update_by_owner(self):
         url = reverse('user-detail', args=[self.user.id])
         data = {
             'username': 'updateduser',
@@ -101,7 +107,7 @@ class UserTest(APITestCase):
             'can_be_contacted': False,
             'can_data_be_shared': False,
         }
-        response = self.client.put(url, data)
+        response = self.client.patch(url, data)
         self.assertEqual(response.status_code, 200)
         self.user.refresh_from_db()
         self.assertEqual(self.user.username, 'updateduser')
@@ -110,11 +116,28 @@ class UserTest(APITestCase):
         self.assertFalse(self.user.can_be_contacted)
         self.assertFalse(self.user.can_data_be_shared)
 
+    def test_update_by_no_owner(self):
+        other_token = str(RefreshToken.for_user(self.user_private).access_token)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + other_token)
+        url = reverse('user-detail', args=[self.user.id])
+        data = {
+            'username': 'updatedusername'
+        }
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_user_delete(self):
         url = reverse('user-detail', args=[self.user.id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(User.objects.filter(id=self.user.id).exists())
+
+    def test_delete_user_detail_by_other_user(self):
+        other_token = str(RefreshToken.for_user(self.user_private).access_token)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + other_token)
+        url = reverse('user-detail', kwargs={'pk': self.user.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_user_login(self):
         url = reverse('login')
@@ -127,3 +150,7 @@ class UserTest(APITestCase):
         self.assertIn('access', response.data)
         self.assertIn('refresh', response.data)
         
+    @classmethod
+    def tearDownClass(cls):
+        super(UserTest, cls).tearDownClass()
+        print('Test User ok')

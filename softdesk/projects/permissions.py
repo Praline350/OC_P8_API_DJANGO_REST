@@ -3,6 +3,12 @@ from rest_framework.permissions import BasePermission
 from projects.models import Contributor, Project, Issue, Comment
 
 
+
+class IsOwner(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        is_owner = obj == request.user
+        return is_owner
+
 class IsAuthor(BasePermission):
     def has_object_permission(self, request, view, obj):
         if isinstance(obj, Project):
