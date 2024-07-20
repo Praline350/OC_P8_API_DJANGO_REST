@@ -7,13 +7,14 @@ from projects.models import Contributor, Project, Issue, Comment
 class IsOwner(BasePermission):
     def has_object_permission(self, request, view, obj):
         is_owner = obj == request.user
+        # print(f"debug : isowner {is_owner}, user {request.user}")
         return is_owner
 
 class IsAuthor(BasePermission):
     def has_object_permission(self, request, view, obj):
         if isinstance(obj, Project):
             is_author = obj.author == request.user
-            # print(f"Debug: IsAuthor (Project) - User: {request.user.username}, Object Author: {obj.author.username}, Is Author: {is_author}")
+            #print(f"Debug: IsAuthor (Project) - User: {request.user.username}, Object Author: {obj.author.username}, Is Author: {is_author}")
         else:  # obj is Issue or Comment
             is_author = obj.author.user == request.user
             # print(f"Debug: IsAuthor (Issue/Comment) - User: {request.user.username}, Object Author: {obj.author.user.username}, Is Author: {is_author}")

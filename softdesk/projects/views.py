@@ -21,12 +21,13 @@ class ProjectViewset(MultipleSerializerMixin ,ModelViewSet):
     detail_serializer_class = ProjectDetailSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'create']:
-            self.permission_classes = [IsAuthenticated]
-        elif self.action in ['retrieve']:
-            self.permission_classes = [IsAuthenticated, IsProjectContributor]
-        else:  # ['update', 'partial_update', 'destroy']
-            self.permission_classes = [IsAuthenticated,IsProjectContributor, IsAuthor]
+        match self.action:
+            case 'list' | 'create':
+                self.permission_classes = [IsAuthenticated]
+            case 'retrieve':
+                self.permission_classes = [IsAuthenticated, IsProjectContributor]
+            case _:
+                self.permission_classes = [IsAuthenticated, IsProjectContributor, IsAuthor]
         return super().get_permissions()
 
     def get_queryset(self):
@@ -45,10 +46,11 @@ class IssueViewset(MultipleSerializerMixin ,ModelViewSet):
     serializer_class = IssueListSerializer
     
     def get_permissions(self):
-        if self.action in ['list', 'create', 'retrieve']:
-            self.permission_classes = [IsAuthenticated, IsProjectContributor]
-        else:  # ['update', 'partial_update', 'destroy']
-            self.permission_classes = [IsAuthenticated, IsProjectContributor, IsAuthor]
+        match self.action:
+            case 'list' | 'create' | 'retrieve':
+                self.permission_classes = [IsAuthenticated, IsProjectContributor]
+            case _:
+                self.permission_classes = [IsAuthenticated, IsProjectContributor, IsAuthor]
         return super().get_permissions()
 
     def get_queryset(self):
@@ -65,10 +67,11 @@ class CommentViewset(MultipleSerializerMixin, ModelViewSet):
     serializer_class = CommentSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            self.permission_classes = [IsAuthenticated, IsProjectContributor]
-        else:  # ['update', 'partial_update', 'destroy']
-            self.permission_classes = [IsAuthenticated, IsProjectContributor, IsAuthor]
+        match self.action:
+            case 'list' | 'retrieve':
+                self.permission_classes = [IsAuthenticated, IsProjectContributor]
+            case _:
+                self.permission_classes = [IsAuthenticated, IsProjectContributor, IsAuthor]
         return super().get_permissions()
 
     def get_queryset(self):
