@@ -4,6 +4,4 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    # Ajoute cette ligne pour spécifier l'utilisation de pipenv
-    registries: {}
     open-pull-requests-limit: 10
