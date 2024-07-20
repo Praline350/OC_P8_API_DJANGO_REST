@@ -32,10 +32,12 @@ class UserTest(APITestCase):
         url = reverse('user-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        for user in response.data:
+        user_data = None
+        for user in response.data['results']:
             if user['username'] == 'nomailuser':
                 user_data = user
                 break
+
         self.assertIsNotNone(user_data)
         self.assertNotIn('email', user_data)
         
@@ -43,7 +45,8 @@ class UserTest(APITestCase):
         url = reverse('user-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        for user in response.data:
+        user_private_data = None
+        for user in response.data['results']:
             if user['username'] == 'privateuser':
                 user_private_data = user
                 break

@@ -31,10 +31,11 @@ class UserViewset(MultipleSerializerMixin, ModelViewSet):
         return User.objects.all()
     
     def get_permissions(self):
-        if self.action == 'create':
-            self.permission_classes = [AllowAny]
-        elif self.action in ['update', 'partial_update', 'destroy']:
-            self.permission_classes = [IsAuthenticated, IsOwner]
-        else:
-            self.permission_classes = [IsAuthenticated]
+        match self.action:
+            case 'create':
+                self.permission_classes = [AllowAny]
+            case 'update' |'partial_update' | 'destroy':
+                self.permission_classes = [IsAuthenticated, IsOwner]
+            case _:
+                self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
