@@ -5,11 +5,20 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import InvalidToken, AuthenticationFailed
 
 from projects.permissions import IsOwner
 from authentication.serializers import UserListSerializer, UserDetailSerializer
 
 User = get_user_model()
+
+class CustomJWTAuthentication(JWTAuthentication):
+    def get_user(self, validated_token):
+        user = super().get_user(validated_token)
+        if not user.is_active:
+            raise AuthenticationFailed('User is inactive')
+        return user
 
 
 class MultipleSerializerMixin:
