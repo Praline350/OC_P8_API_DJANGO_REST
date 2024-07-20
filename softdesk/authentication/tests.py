@@ -11,6 +11,7 @@ class UserTest(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(username='testuser', password='password', age=20, can_be_contacted=True, can_data_be_shared=True)
+        self.inactive_user = User.objects.create_user(username='inactiveuser', password='password', age=20, is_active=False)
         self.user_not_contacted = User.objects.create_user(username='nomailuser', password='password', age=20, can_be_contacted=False, can_data_be_shared=True)
         self.user_private = User.objects.create_user(username='privateuser', password='password', age=20, can_be_contacted=False, can_data_be_shared=False)
         self.admin_user = User.objects.create_superuser(username='admin', password='password', age=30, can_be_contacted=True, can_data_be_shared=True)
@@ -54,7 +55,17 @@ class UserTest(APITestCase):
         self.assertNotIn('email', user_private_data)
         self.assertNotIn('age', user_private_data)
         self.assertNotIn('can_be_contacted', user_private_data)
-        
+    
+    def test_get_active_user(self):
+        url = reverse('user-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.token = str(RefreshToken.for_user(self.inactive_user).access_token)
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.token)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 401)
+
+
         
     def test_user_registration(self):
         url = reverse('user-list')

@@ -28,7 +28,7 @@ class UserViewset(MultipleSerializerMixin, ModelViewSet):
     detail_serializer_class = UserDetailSerializer
     
     def get_queryset(self):
-        return User.objects.all()
+        return User.objects.filter(is_active=True)
     
     def get_permissions(self):
         match self.action:
