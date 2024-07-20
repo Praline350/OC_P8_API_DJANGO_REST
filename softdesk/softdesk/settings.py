@@ -135,10 +135,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 5,
 }
 
+
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=120),  # Durée de vie du token d'accès
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),  # Durée de vie du token d'accès
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),   # Durée de vie du token de rafraîchissement
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
