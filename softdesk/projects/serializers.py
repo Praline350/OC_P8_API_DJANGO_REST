@@ -15,6 +15,50 @@ class ContributorSerializer(serializers.ModelSerializer):
         model = Contributor
         fields = ['user', 'project']
 
+class IssueListSerializer(serializers.ModelSerializer):
+    author = serializers.ReadOnlyField(source='author.user.username')
+    project = serializers.ReadOnlyField(source='project.name')
+    assignees = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, write_only=True, required=False)
+    
+
+    class Meta:
+        model = Issue
+        fields = ['id', 'project', 'author', 'title', 'description', 'status', 'priority', 'created_time', 'updated_time', 'assignees']
+        read_only_fields = ['created_time', 'updated_time']
+
+    
+    
+    def validate_assignees(self, value):
+        project = self.instance.project
+        if isinstance(project, int):
+            project = Project.objects.get(pk=project)
+        for user in value:
+            if not Contributor.objects.filter(project=project, user=user).exists():
+                raise serializers.ValidationError(f"{user.username} is not a contributor of the project.")
+        return value
+    
+    def create(self, validated_data):
+        assignees = validated_data.pop('assignees', [])
+        issue = super().create(validated_data)
+        for user in assignees:
+            issue.assignees.add(Contributor.objects.get(project=issue.project, user=user))
+        return issue
+    
+    def update(self, instance, validated_data):
+        assignees = validated_data.pop('assignees', None)
+        if assignees is not None:
+            instance.assignees.set([Contributor.objects.get(project=instance.project, user_id=user_id) for user_id in assignees])
+        return super().update(instance, validated_data)
+
+
+class IssueDetailSerializer(IssueListSerializer):
+    comments_count = serializers.SerializerMethodField()
+
+    class Meta(IssueListSerializer.Meta):
+        fields = IssueListSerializer.Meta.fields + [ 'comments_count']
+        
+    def get_comments_count(self, obj):
+        return obj.comments.count()
 
 class ProjectListSerializer(serializers.ModelSerializer):
     author = serializers.ReadOnlyField(source='author.username')
@@ -44,8 +88,6 @@ class ProjectListSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         contributors_usernames = validated_data.pop('contributors', [])
         request = self.context.get('request')
-        
-        # Create project
         project = Project.objects.create(author=request.user, **validated_data)
         
         # Add other contributors
@@ -54,12 +96,16 @@ class ProjectListSerializer(serializers.ModelSerializer):
             Contributor.objects.get_or_create(user=user, project=project)
         
         return project
-        
 
 
 class ProjectDetailSerializer(ProjectListSerializer):
+    issues = serializers.SerializerMethodField()
+
     class Meta(ProjectListSerializer.Meta):
-        fields = ProjectListSerializer.Meta.fields
+        fields = ProjectListSerializer.Meta.fields + ['issues']
+
+    def get_issues(self, obj):
+        return obj.issues.values_list('title', flat=True)
 
     def update(self, instance, validated_data):
         request = self.context.get('request')
@@ -100,38 +146,6 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'issue', 'author', 'description', 'created_time']
         read_only_fields = ['created_time', 'author']
 
-
-class IssueListSerializer(serializers.ModelSerializer):
-    author = serializers.ReadOnlyField(source='author.user.username')
-    project = serializers.ReadOnlyField(source='project.name')
-    assignees = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, write_only=True, required=False)
-
-    class Meta:
-        model = Issue
-        fields = ['id', 'project', 'author', 'title', 'description', 'status', 'priority', 'created_time', 'updated_time', 'assignees']
-        read_only_fields = ['created_time', 'updated_time']
-
-    def validate_assignees(self, value):
-        project = self.instance.project
-        if isinstance(project, int):
-            project = Project.objects.get(pk=project)
-        for user in value:
-            if not Contributor.objects.filter(project=project, user=user).exists():
-                raise serializers.ValidationError(f"{user.username} is not a contributor of the project.")
-        return value
-    
-    def create(self, validated_data):
-        assignees = validated_data.pop('assignees', [])
-        issue = super().create(validated_data)
-        for user in assignees:
-            issue.assignees.add(Contributor.objects.get(project=issue.project, user=user))
-        return issue
-    
-    def update(self, instance, validated_data):
-        assignees = validated_data.pop('assignees', None)
-        if assignees is not None:
-            instance.assignees.set([Contributor.objects.get(project=instance.project, user_id=user_id) for user_id in assignees])
-        return super().update(instance, validated_data)
 
 
     

@@ -44,6 +44,7 @@ class ContributorViewset(MultipleSerializerMixin, ModelViewSet):
 
 class IssueViewset(MultipleSerializerMixin ,ModelViewSet):
     serializer_class = IssueListSerializer
+    detail_serializer_class = IssueDetailSerializer
     
     def get_permissions(self):
         match self.action:

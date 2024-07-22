@@ -32,7 +32,7 @@ class ProjectTest(APITestCase):
             'name': 'Test Project',
             'description': 'This is a test project',
             'type': 'back-end',
-            'contributors': [self.other_user]
+            'contributors': 'otheruser'
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 201)

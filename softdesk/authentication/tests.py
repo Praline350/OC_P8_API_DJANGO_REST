@@ -64,8 +64,6 @@ class UserTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.token)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 401)
-
-
         
     def test_user_registration(self):
         url = reverse('user-list')
