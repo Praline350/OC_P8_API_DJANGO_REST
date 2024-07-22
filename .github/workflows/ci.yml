@@ -33,3 +33,4 @@ jobs:
       run: |
         pipenv run python manage.py migrate
         pipenv run python manage.py test
+      working-directory: ./softdesk
